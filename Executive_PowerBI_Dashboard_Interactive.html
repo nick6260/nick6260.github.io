@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Treasury & FX Risk Control Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #0F172A; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-card:hover { border-color: rgba(56, 189, 248, 0.4); transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen p-4 md:p-6">
+
+    <!-- Top Navigation Header -->
+    <header class="glass-card rounded-2xl p-4 mb-6 flex flex-col md:flex-row justify-between items-center shadow-2xl">
+        <div class="flex items-center space-x-3 mb-4 md:mb-0">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide text-white">Executive Treasury & FX Risk Dashboard</h1>
+                <p class="text-xs text-slate-400">Real-time Liquidity Monitoring & FX Exposure Controls</p>
+            </div>
+        </div>
+        
+        <!-- Interactive Slicers / Filters -->
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Currency</span>
+                <select id="currSelect" onchange="updateDashboard()" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-cyan-500 outline-none text-slate-200">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                </select>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Period</span>
+                <select id="periodSelect" onchange="updateDashboard()" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-cyan-500 outline-none text-slate-200">
+                    <option value="W30">2026-W30</option>
+                    <option value="W29">2026-W29</option>
+                    <option value="W28">2026-W28</option>
+                </select>
+            </div>
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Scope</span>
+                <select class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-cyan-500 outline-none text-slate-200">
+                    <option>All Consolidated</option>
+                    <option>Parent Only</option>
+                    <option>Subsidiaries</option>
+                </select>
+            </div>
+            <button class="mt-4 md:mt-0 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-download mr-1"></i> Export Report
+            </button>
+        </div>
+    </header>
+
+    <!-- Top KPI Cards Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-cyan-400 shadow-lg">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Group Cash</p>
+            <h3 id="kpi-cash" class="text-2xl font-extrabold text-white mt-1">$152.0M</h3>
+            <p class="text-[11px] text-emerald-400 mt-2 flex items-center font-medium">
+                <i class="fa-solid fa-arrow-trend-up mr-1"></i> +$4.0M (WoW)
+            </p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-indigo-400 shadow-lg">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Group Borrowing</p>
+            <h3 id="kpi-borrowing" class="text-2xl font-extrabold text-white mt-1">($48.0M)</h3>
+            <p class="text-[11px] text-emerald-400 mt-2 flex items-center font-medium">
+                <i class="fa-solid fa-arrow-trend-down mr-1"></i> -$2.0M (WoW)
+            </p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-blue-500 shadow-lg">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Group Net Cash</p>
+            <h3 id="kpi-netcash" class="text-2xl font-extrabold text-white mt-1">$104.0M</h3>
+            <p class="text-[11px] text-emerald-400 mt-2 flex items-center font-medium">
+                <i class="fa-solid fa-arrow-trend-up mr-1"></i> +$6.0M (WoW)
+            </p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-purple-400 shadow-lg">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Net FX Exposure</p>
+            <h3 id="kpi-fx" class="text-2xl font-extrabold text-white mt-1">$20.0M</h3>
+            <p class="text-[11px] text-slate-400 mt-2 flex items-center font-medium">
+                <i class="fa-solid fa-minus mr-1"></i> Flat vs W29
+            </p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-l-4 border-l-emerald-400 shadow-lg">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Hedge Ratio</p>
+            <h3 id="kpi-ratio" class="text-2xl font-extrabold text-emerald-400 mt-1">81.8%</h3>
+            <p class="text-[11px] text-emerald-400 mt-2 flex items-center font-medium">
+                <i class="fa-solid fa-circle-check mr-1"></i> Target (70%) Met
+            </p>
+        </div>
+    </div>
+
+    <!-- Middle Charts Grid (2 Main Trend Line Charts) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-200">Weekly Net Cash Trend (Parent vs. Subs)</h3>
+                <span class="text-xs bg-slate-800 text-cyan-400 px-2.5 py-1 rounded-full font-medium">Weekly</span>
+            </div>
+            <div class="h-64">
+                <canvas id="cashTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-200">FX Exposure vs. Hedged Position Trend</h3>
+                <span class="text-xs bg-slate-800 text-purple-400 px-2.5 py-1 rounded-full font-medium">FX Risk</span>
+            </div>
+            <div class="h-64">
+                <canvas id="fxTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Grid (2 Doughnuts + 1 Column Chart + 1 Dynamic Table Matrix) -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Cash Share Doughnut -->
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
+            <h3 class="text-sm font-bold text-slate-200 mb-3">Net Cash Share</h3>
+            <div class="h-52 flex items-center justify-center">
+                <canvas id="doughnutCash"></canvas>
+            </div>
+        </div>
+
+        <!-- FX Structure Doughnut -->
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
+            <h3 class="text-sm font-bold text-slate-200 mb-3">FX Hedging Structure</h3>
+            <div class="h-52 flex items-center justify-center">
+                <canvas id="doughnutFX"></canvas>
+            </div>
+        </div>
+
+        <!-- Cash vs Borrowing Bar Chart -->
+        <div class="glass-card rounded-2xl p-5 shadow-xl">
+            <h3 class="text-sm font-bold text-slate-200 mb-3">Group Cash vs. Debt</h3>
+            <div class="h-52">
+                <canvas id="barCashDebt"></canvas>
+            </div>
+        </div>
+
+        <!-- Power BI Table Matrix -->
+        <div class="glass-card rounded-2xl p-5 shadow-xl overflow-x-auto">
+            <h3 class="text-sm font-bold text-slate-200 mb-3">Position Summary Matrix</h3>
+            <table class="w-full text-xs text-left text-slate-300">
+                <thead class="bg-slate-800/80 text-slate-400 uppercase text-[10px]">
+                    <tr>
+                        <th class="p-2">Item</th>
+                        <th class="p-2 text-right">Parent</th>
+                        <th class="p-2 text-right">Subs</th>
+                        <th class="p-2 text-right">Cons.</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-medium">
+                    <tr><td class="p-2 font-semibold">Cash</td><td class="p-2 text-right text-slate-200">$105M</td><td class="p-2 text-right text-slate-200">$47M</td><td class="p-2 text-right text-cyan-400 font-bold">$152M</td></tr>
+                    <tr><td class="p-2 font-semibold">Borrowing</td><td class="p-2 text-right text-slate-200">($28M)</td><td class="p-2 text-right text-slate-200">($20M)</td><td class="p-2 text-right text-indigo-400 font-bold">($48M)</td></tr>
+                    <tr class="bg-slate-800/40"><td class="p-2 font-bold text-white">Net Cash</td><td class="p-2 text-right text-emerald-400 font-bold">$77M</td><td class="p-2 text-right text-emerald-400 font-bold">$27M</td><td class="p-2 text-right text-emerald-400 font-bold">$104M</td></tr>
+                    <tr><td class="p-2 font-semibold">Gross FX</td><td class="p-2 text-right">-</td><td class="p-2 text-right">-</td><td class="p-2 text-right text-purple-400 font-bold">$110M</td></tr>
+                    <tr><td class="p-2 font-semibold">Hedge</td><td class="p-2 text-right">-</td><td class="p-2 text-right">-</td><td class="p-2 text-right text-purple-400 font-bold">($90M)</td></tr>
+                    <tr class="bg-slate-800/40"><td class="p-2 font-bold text-white">Net FX</td><td class="p-2 text-right">-</td><td class="p-2 text-right">-</td><td class="p-2 text-right text-purple-300 font-bold">$20M</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Chart.js Logic Script -->
+    <script>
+        // Common Chart Defaults for Dark Theme
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.font.family = 'Segoe UI';
+
+        // 1. Weekly Net Cash Trend Line Chart
+        const ctxCash = document.getElementById('cashTrendChart').getContext('2d');
+        new Chart(ctxCash, {
+            type: 'line',
+            data: {
+                labels: ['W23', 'W24', 'W25', 'W26', 'W27', 'W28', 'W29', 'W30'],
+                datasets: [
+                    { label: 'Consolidated Net Cash', data: [60, 64, 70, 80, 83, 90, 98, 104], borderColor: '#38BDF8', backgroundColor: 'rgba(56, 189, 248, 0.1)', tension: 0.4, fill: true, borderWidth: 3 },
+                    { label: 'Parent Net Cash', data: [45, 48, 52, 57, 60, 66, 72, 77], borderColor: '#818CF8', tension: 0.4, borderWidth: 2 },
+                    { label: 'Subsidiary Net Cash', data: [15, 16, 18, 23, 23, 24, 26, 27], borderColor: '#34D399', tension: 0.4, borderWidth: 2 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } } }
+        });
+
+        // 2. FX Exposure Trend Line Chart
+        const ctxFX = document.getElementById('fxTrendChart').getContext('2d');
+        new Chart(ctxFX, {
+            type: 'line',
+            data: {
+                labels: ['W23', 'W24', 'W25', 'W26', 'W27', 'W28', 'W29', 'W30'],
+                datasets: [
+                    { label: 'Gross FX Exposure', data: [90, 92, 95, 98, 100, 102, 105, 110], borderColor: '#C084FC', tension: 0.4, borderWidth: 3 },
+                    { label: 'Net Unhedged Exposure', data: [28, 25, 25, 22, 22, 20, 20, 20], borderColor: '#F43F5E', backgroundColor: 'rgba(244, 63, 94, 0.15)', tension: 0.4, fill: true, borderWidth: 2 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } } }
+        });
+
+        // 3. Doughnut 1: Net Cash Share
+        const ctxDoughnut1 = document.getElementById('doughnutCash').getContext('2d');
+        new Chart(ctxDoughnut1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Parent', 'Subsidiaries'],
+                datasets: [{ data: [77, 27], backgroundColor: ['#38BDF8', '#818CF8'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }, cutout: '70%' }
+        });
+
+        // 4. Doughnut 2: FX Hedging Structure
+        const ctxDoughnut2 = document.getElementById('doughnutFX').getContext('2d');
+        new Chart(ctxDoughnut2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Natural Hedge', 'Forward Contract', 'Unhedged'],
+                datasets: [{ data: [32, 58, 20], backgroundColor: ['#34D399', '#A855F7', '#F43F5E'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }, cutout: '70%' }
+        });
+
+        // 5. Column Chart: Group Cash vs Borrowing
+        const ctxBar = document.getElementById('barCashDebt').getContext('2d');
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: ['W27', 'W28', 'W29', 'W30'],
+                datasets: [
+                    { label: 'Cash', data: [138, 142, 148, 152], backgroundColor: '#38BDF8', borderRadius: 4 },
+                    { label: 'Borrowing', data: [55, 52, 50, 48], backgroundColor: '#6366F1', borderRadius: 4 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } } }
+        });
+
+        // Interactive Filter Simulation
+        function updateDashboard() {
+            const curr = document.getElementById('currSelect').value;
+            const symbol = curr === 'EUR' ? '€' : (curr === 'GBP' ? '£' : '$');
+            const rate = curr === 'EUR' ? 0.92 : (curr === 'GBP' ? 0.78 : 1.0);
+            
+            document.getElementById('kpi-cash').innerText = symbol + (152 * rate).toFixed(1) + 'M';
+            document.getElementById('kpi-borrowing').innerText = '(' + symbol + (48 * rate).toFixed(1) + 'M)';
+            document.getElementById('kpi-netcash').innerText = symbol + (104 * rate).toFixed(1) + 'M';
+            document.getElementById('kpi-fx').innerText = symbol + (20 * rate).toFixed(1) + 'M';
+        }
+    </script>
+</body>
+</html>
